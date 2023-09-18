@@ -5,6 +5,7 @@
 #include <WebSocketsServer.h>
 #include <ArduinoJson.h>
 #include <EEPROM.h>
+#include <SPIFFS.h>
 // #define LED2 12
 #define sensor1 32 // upper tank
 // #define sensor2 32 // lower tank
@@ -31,65 +32,6 @@ WifiTool wifiTool;
 
 /////////////////////////////////////////////////
 int Percentage;
-char webpage[] PROGMEM = R"=====(
-<!DOCTYPE html>
-<html>
-<script>
-var connection = new WebSocket('ws://'+location.hostname+':81/');
-var button_1_status = 0;
-var button_2_status = 0;
-var level_data = 0;
-connection.onmessage = function(event){
-  var full_data = event.data;
-  console.log(full_data);
-  var data = JSON.parse(full_data);
-  level_data = data.level;
-  document.getElementById("level_meter").value = level_data;
-  document.getElementById("level_value").innerHTML = level_data;
-}
-function button_1_on()
-{
-   button_1_status = 1; 
-  console.log("Motor is ON");
-  send_data();
-}
-function button_1_off()
-{
-  button_1_status = 0;
-  console.log("Motor is OFF");
-  send_data();
-}
-function button_2_on()
-{
-   button_2_status = 1; 
-  console.log("LED 2 is ON");
-  send_data();
-}
-function button_2_off()
-{
-  button_2_status = 0;
-console.log("LED 2 is OFF");
-send_data();
-}
-function send_data()
-{
-  var full_data = '{"relay" :'+button_1_status+',"LED2":'+button_2_status+'}';
-  connection.send(full_data);
-}
-</script>
-<body>
-<center>
-<h1>My Home Automation</h1>
-<h3> Motor </h3>
-<button onclick= "button_1_on()" >On</button><button onclick="button_1_off()" >Off</button>
-<h3> LED 2 </h3>
-<button onclick="button_2_on()">On</button><button onclick="button_2_off()">Off</button>
-</center>
-<div style="text-align: center;">
-<h3>WATER_LEVEL</h3><meter value="0" min="0" max="100" id="level_meter"> </meter><h3 id="level_value" style="display: inline-block;"> 0 </h3>
-</body>
-</html>
-)=====";
 //////////////////////////////////////////////////////
 #include <ESPAsyncWebServer.h>
 AsyncWebServer server(80); // server port 80
@@ -194,6 +136,7 @@ void setup()
   pinMode(AMselector, INPUT);
   pinMode(start, INPUT);
   pinMode(pumpstop, INPUT);
+  SPIFFS.begin();
 
   wifiTool.begin(false);
   if (!wifiTool.wifiAutoConnect())
@@ -205,17 +148,12 @@ void setup()
   { // esp.local/
     Serial.println("MDNS responder started");
   }
-  server.on("/", [](AsyncWebServerRequest *request)
-            { request->send_P(200, "text/html", webpage); });
 
-  server.on("/led1/on", HTTP_GET, [](AsyncWebServerRequest *request)
-            { 
-    digitalWrite(relay,HIGH);
-  request->send_P(200, "text/html", webpage); });
-
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(SPIFFS, "/main.html", "text/html"); });
   server.onNotFound(notFound);
 
-  server.begin(); // it will start webserver
+  server.begin();
   websockets.begin();
   websockets.onEvent(webSocketEvent);
   // timer.attach(2, send_sensor);
@@ -252,28 +190,7 @@ void loop()
     a = 7;
   if (a < 150 && a > 50)
     a = 8;
-
-  if (a == 0) //////////////////////////
-  {
-    EEPROM.write(0, 1);
-    EEPROM.write(1, 2);
-  }
-
-  if (a == 3)
-  {
-    EEPROM.write(0, 2);
-  }
-  if (a == 11)
-  {
-    if (a != 3 && EEPROM.read(0) == 1 && EEPROM.read(1) == 2)
-    {
-      digitalWrite(relay, HIGH);
-    }
-    else if (EEPROM.read(0) != 1 && EEPROM.read(1) != 2 && EEPROM.read(0) == 2)
-    {
-      digitalWrite(relay, LOW);
-    }
-  }
+  // }
   button1.loop();
   button2.loop();
   button3.loop();
@@ -292,6 +209,7 @@ void loop()
     state3++;
     if (state3 > 1)
     {
+      state3 = 0;
       state1 = 0;
     }
     on();
@@ -303,7 +221,9 @@ void loop()
     state2++;
     if (state2 > 1)
     {
-      state2 = 0;
+      int state1 = 1;
+      int state2 = 0;
+      int state3 = 0;
     }
     off();
     Serial.println(state3);
@@ -314,6 +234,8 @@ void loop()
     Serial.println("manual mode start");
     digitalWrite(manled, HIGH);
     digitalWrite(autoled, LOW);
+    digitalWrite(relay, HIGH);
+    Serial.println("motor start");
     Serial.println("inside button3 press");
 
     if (a == 0) //////////////////////////// 0 level
@@ -324,8 +246,7 @@ void loop()
       JSON_Data += "}";
       Serial.println(JSON_Data);
       websockets.broadcastTXT(JSON_Data);
-      digitalWrite(relay, HIGH);
-      Serial.println("motor start");
+
       delay(1000);
     }
 
@@ -436,7 +357,7 @@ void loop()
     delay(500);
     digitalWrite(buzzer, LOW);
     digitalWrite(relay, LOW);
-    EEPROM.write(4,2);
+    EEPROM.write(4, 2);
   }
 
   if (EEPROM.read(4) == 2)
