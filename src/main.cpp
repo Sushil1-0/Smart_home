@@ -98,6 +98,7 @@ void modeselection()
     state1 = 0;
     mode = 1;
     delay(100);
+    EEPROM.commit();
     break;
   }
   case 0: ///////////////////////////////////////AUTO MODE
@@ -107,6 +108,7 @@ void modeselection()
     state1 = 1;
     mode = 2;
     delay(100);
+    EEPROM.commit();
     break;
   }
   default:
@@ -128,6 +130,7 @@ void tankselection()
     state2 = 0;
     tank = 1;
     delay(100);
+    EEPROM.commit();
     break;
   }
   case 0: ///////////////////////////////////////////// LOWERTANK
@@ -138,6 +141,7 @@ void tankselection()
     state2 = 1;
     tank = 2;
     delay(100);
+    EEPROM.commit();
     break;
   }
   default:
