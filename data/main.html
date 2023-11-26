@@ -5,6 +5,7 @@
     var button_1_status = 0;
     var button_2_status = 0;
     var level_data = 0;
+
     connection.onmessage = function (event) {
         var full_data = event.data;
         console.log(full_data);
@@ -12,6 +13,8 @@
         level_data = data.level;
         document.getElementById("level_meter").value = level_data;
         document.getElementById("level_value").innerHTML = level_data;
+        var deviceID = data.deviceID;
+        document.getElementById("deviceID").innerHTML = deviceID;
     }
     function button_1_on() {
         button_1_status = 1;
@@ -50,6 +53,9 @@
     <div style="text-align: center;">
         <h3>WATER_LEVEL</h3><meter value="0" min="0" max="100" id="level_meter"> </meter>
         <h3 id="level_value" style="display: inline-block;"> 0 </h3>
+        <h3>deviceID</h3>
+        <h3 id="deviceID" style="display: inline-block;"> 0 </h3>
+
 </body>
 
 </html>

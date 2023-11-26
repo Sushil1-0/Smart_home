@@ -49,10 +49,8 @@ void notFound(AsyncWebServerRequest *request)
 {
   request->send(404, "text/plain", "Page Not found");
 }
-
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
 {
-
   switch (type)
   {
   case WStype_DISCONNECTED:
@@ -62,6 +60,16 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
   {
     IPAddress ip = websockets.remoteIP(num);
     Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+    uint8_t mac[6];
+    esp_read_mac(mac, ESP_MAC_WIFI_STA);
+
+    // Print the MAC address as a device ID
+    char deviceId[7];
+    sprintf(deviceId, "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    String chipID = String(ESP.getEfuseMac(), HEX);
+    String extendedDeviceID = chipID + deviceId;
+    Serial.println("Sending device ID: " + extendedDeviceID);
+    websockets.sendTXT(num, "{\"deviceID\": \"" + extendedDeviceID + "\"}");
   }
   break;
   case WStype_TEXT:
@@ -77,7 +85,6 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
       Serial.println(error.c_str());
       return;
     }
-
     int LED1_status = doc["relay"];
     int LED2_status = doc["LED2"];
     digitalWrite(relay, LED1_status);
@@ -92,7 +99,7 @@ void modeselection()
   {
   case 1: ////////////////////////////////////////MANNUAL MODE
   {
-    Serial.println("inside case 1");
+    Serial.println("manual mode start");
     EEPROM.write(4, 1);
     Serial.println(EEPROM.read(4));
     state1 = 0;
@@ -103,7 +110,7 @@ void modeselection()
   }
   case 0: ///////////////////////////////////////AUTO MODE
   {
-    Serial.println("inside case 1");
+    Serial.println("auto mode start");
     EEPROM.write(4, 2);
     state1 = 1;
     mode = 2;
@@ -150,76 +157,22 @@ void tankselection()
   }
 }
 
-// /**********************************************************************************************************************************************/
-// ////////////////////////*mode selection*//////////////////////////////////
-// // void modeselection()
-// // {
-// //   switch (state1)
-// //   {
-// //   case 1: // Auto Mode
-// //   //write value 2 into eeprom address 4
-// //     EEPROM.write(4, 2);
-// //     delay(100);
-// //     break;
-// //   case 2: // Manual Mode
-// //    //write value 1 into eeprom address 4
-// //     EEPROM.write(4, 1);
-// //     delay(100);
-// //     break;
-// //   default:
-// //     break;
-// //   }
-// // }
+// String getDeviceId() {
+//   uint8_t mac[6];
+//   WiFi.macAddress(mac);
 
-// void modeselection()
-// {
-//   switch (state1)
-//   {
-//   case 1: ////////////////////////////////////////MANNUAL MODE
-//   {
-//     EEPROM.write(4, 1);
-//     state1 = 0;
-//     mode = 1;
-//     delay(100);
-//     break;
+//   String deviceId = "";
+//   for (int i = 0; i < 6; ++i) {
+//     if (mac[i] < 0x10) {
+//       deviceId += "0";
+//     }
+//     deviceId += String(mac[i], HEX);
+//     if (i < 5) {
+//       deviceId += ":";
+//     }
 //   }
-//   case 0: ///////////////////////////////////////AUTO MODE
-//   {
-//     EEPROM.write(4, 2);
-//     state1 = 1;
-//     mode = 2;
-//     delay(100);
-//     break;
-//   }
-//   default:
-//   {
-//   }
-//   }
-// }
 
-// void on()
-// {
-//   switch (state3)
-//   {
-//   case 1:
-//     EEPROM.write(5, 1);
-//     break;
-
-//   default:
-//     break;
-//   }
-// }
-// void off()
-// {
-//   switch (state2)
-//   {
-//   case 1:
-//     EEPROM.write(5, 0);
-//     break;
-
-//   default:
-//     break;
-//   }
+//   return deviceId;
 // }
 
 void setup()
@@ -261,13 +214,27 @@ void setup()
   // pinMode(OUselector, INPUT);
   SPIFFS.begin();
 
+  /********************************* Get the device ID********************************************/
+  uint8_t mac[6];
+  esp_read_mac(mac, ESP_MAC_WIFI_STA);
+
+  // Print the MAC address as a device ID
+  char deviceId[13];
+  sprintf(deviceId, "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  String chipID = String(ESP.getEfuseMac(), HEX);
+  extern String extendedDeviceID = chipID + deviceId;
+
+  Serial.print("Extended Device ID: ");
+  Serial.println(extendedDeviceID);
+
+  /**************************************************************************************************/
   wifiTool.begin(false);
   if (!wifiTool.wifiAutoConnect())
   {
     Serial.println("fail to connect to wifi!!!!");
     wifiTool.runApPortal();
   }
-  if (MDNS.begin("ESP"))
+  if (MDNS.begin("esp"))
   { // esp.local/
     Serial.println("MDNS responder started");
   }
@@ -281,368 +248,6 @@ void setup()
   websockets.onEvent(webSocketEvent);
 }
 
-// void setup()
-// {
-//   int a = 0;
-//   Serial.begin(115200);
-//   pinMode(relay, OUTPUT);
-//   pinMode(autoled, OUTPUT);
-//   pinMode(manled, OUTPUT);
-//   EEPROM.begin(EEPROM_SIZE);
-//   EEPROM.write(1, 1);
-//   pinMode(buzzer, OUTPUT);
-//   EEPROM.write(4, 2);
-//   Serial.println("System started");
-//   pinMode(sensor1, INPUT);
-//   pinMode(AMselector, INPUT);
-//   pinMode(start, INPUT);
-//   pinMode(pumpstop, INPUT);
-//   SPIFFS.begin();
-
-//   wifiTool.begin(false);
-//   if (!wifiTool.wifiAutoConnect())
-//   {
-//     Serial.println("fail to connect to wifi!!!!");
-//     wifiTool.runApPortal();
-//   }
-//   if (MDNS.begin("ESP"))
-//   { // esp.local/
-//     Serial.println("MDNS responder started");
-//   }
-
-//   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-//             { request->send(SPIFFS, "/main.html", "text/html"); });
-//   server.onNotFound(notFound);
-
-//   server.begin();
-//   websockets.begin();
-//   websockets.onEvent(webSocketEvent);
-// }
-
-// void loop()
-// {
-//   delay(50);
-//   EEPROM.read(4);
-//   Serial.println(EEPROM.read(4));
-//   int a = analogRead(sensor1);
-//   Serial.println(a);
-//   delay(1000);
-//   if (a <= 50)
-//   {
-//     a = 11;
-//   }
-//   if (a > 4000)
-//     a = 9;
-//   if (a < 1000 && a > 800)
-//     a = 0;
-//   if (a < 1750 && a > 1550)
-//     a = 1;
-//   if (a < 2400 && a > 2100)
-//     a = 2;
-//   if (a < 3000 && a > 2500)
-//     a = 3;
-//   if (a < 3300 && a > 3100)
-//     a = 4;
-//   if (a < 3700 && a > 3600)
-//     a = 5;
-//   if (a < 4000 && a > 3800)
-//     a = 6;
-//   if (a < 290 && a > 150)
-//     a = 7;
-//   if (a < 150 && a > 50)
-//     a = 8;
-//   // }
-//   button1.loop();
-//   button2.loop();
-//   button3.loop();
-//   if (button1.isPressed())
-//   {
-//     Serial.println("hihihii");
-//     state1++;
-//     if (state1 > 2)
-//     {
-//       state1 = 1;
-//     }
-//     modeselection();
-//     Serial.println(state1);
-//   }
-//   if (button3.isPressed())
-//   {
-//     state3++;
-//     if (state3 > 1)
-//     {
-//       state3 = 0;
-//       state1 = 0;
-//     }
-//     on();
-//     Serial.println(state3); // print the updated state value
-//   }
-
-//   if (button2.isPressed())
-//   {
-//     state2++;
-//     if (state2 > 1)
-//     {
-//       state1 = 1;
-//       state2 = 0;
-//       state3 = 0;
-//     }
-//     off();
-//     Serial.println(state2);
-//   }
-
-//   if (EEPROM.read(4) == 1 && EEPROM.read(5) == 1)
-//   {
-//     Serial.println("manual mode start");
-//     digitalWrite(manled, HIGH);
-//     digitalWrite(autoled, LOW);
-//     digitalWrite(relay, HIGH);
-//     Serial.println("motor start");
-
-//     if (a == 0) //////////////////////////// 0 level
-//     {
-//       Percentage = 10;
-//       String JSON_Data = "{\"level\":";
-//       JSON_Data += Percentage;
-//       JSON_Data += "}";
-//       Serial.println(JSON_Data);
-//       websockets.broadcastTXT(JSON_Data);
-//       delay(1000);
-//     }
-
-//     if (a == 1) ////////////////////1 level
-//     {
-//       Percentage = 20;
-//       String JSON_Data = "{\"level\":";
-//       JSON_Data += Percentage;
-//       JSON_Data += "}";
-//       Serial.println(JSON_Data);
-//       websockets.broadcastTXT(JSON_Data);
-//     }
-
-//     if (a == 2) /////////////////////////2 level
-//     {
-//       Percentage = 30;
-//       String JSON_Data = "{\"level\":";
-//       JSON_Data += Percentage;
-//       JSON_Data += "}";
-//       Serial.println(JSON_Data);
-//       websockets.broadcastTXT(JSON_Data);
-//       delay(1000);
-//     }
-
-//     if (a == 3) ////////////////////////////3 level
-//     {
-//       Percentage = 40;
-//       String JSON_Data = "{\"level\":";
-//       JSON_Data += Percentage;
-//       JSON_Data += "}";
-//       Serial.println(JSON_Data);
-//       websockets.broadcastTXT(JSON_Data);
-//       digitalWrite(relay, LOW);
-//       Serial.println("motor stop");
-//       delay(1000);
-//     }
-
-//     if (a == 4) //////////////////////////////4 level
-//     {
-//       Percentage = 10;
-//       String JSON_Data = "{\"level\":";
-//       JSON_Data += Percentage;
-//       JSON_Data += "}";
-//       Serial.println(JSON_Data);
-//       websockets.broadcastTXT(JSON_Data);
-//       delay(1000);
-//     }
-
-//     if (a == 5) ////////////////////////////////5 level
-//     {
-//       Percentage = 10;
-//       String JSON_Data = "{\"level\":";
-//       JSON_Data += Percentage;
-//       JSON_Data += "}";
-//       Serial.println(JSON_Data);
-//       websockets.broadcastTXT(JSON_Data);
-//       delay(1000);
-//     }
-
-//     if (a == 6) /////////////////////////////6 level
-//     {
-//       Percentage = 10;
-//       String JSON_Data = "{\"level\":";
-//       JSON_Data += Percentage;
-//       JSON_Data += "}";
-//       Serial.println(JSON_Data);
-//       websockets.broadcastTXT(JSON_Data);
-//       delay(1000);
-//     }
-
-//     if (a == 7) ///////////////////////////7 level
-//     {
-//       Percentage = 10;
-//       String JSON_Data = "{\"level\":";
-//       JSON_Data += Percentage;
-//       JSON_Data += "}";
-//       Serial.println(JSON_Data);
-//       websockets.broadcastTXT(JSON_Data);
-//       delay(1000);
-//     }
-
-//     if (a == 8) //////////////////////////8 level
-//     {
-//       Percentage = 10;
-//       String JSON_Data = "{\"level\":";
-//       JSON_Data += Percentage;
-//       JSON_Data += "}";
-//       Serial.println(JSON_Data);
-//       websockets.broadcastTXT(JSON_Data);
-//       delay(1000);
-//     }
-
-//     if (a == 9) // 9
-//     {
-//       Percentage = 10;
-//       String JSON_Data = "{\"level\":";
-//       JSON_Data += Percentage;
-//       JSON_Data += "}";
-//       Serial.println(JSON_Data);
-//       websockets.broadcastTXT(JSON_Data);
-//       delay(1000);
-//     }
-//   }
-//   if (EEPROM.read(4) == 1 && EEPROM.read(5) == 0)
-//   {
-//     Serial.println("inside off mode");
-//     digitalWrite(buzzer, HIGH);
-//     delay(500);
-//     digitalWrite(buzzer, LOW);
-//     digitalWrite(relay, LOW);
-//     EEPROM.write(4, 2);
-//   }
-
-//   if (EEPROM.read(4) == 2)
-//   {
-//     Serial.println("auto mode start");
-//     digitalWrite(manled, LOW);
-//     digitalWrite(autoled, HIGH);
-//     if (a == 0) //////////////////////////// 0 level
-//     {
-//       Percentage = 10;
-//       String JSON_Data = "{\"level\":";
-//       JSON_Data += Percentage;
-//       JSON_Data += "}";
-//       Serial.println(JSON_Data);
-//       websockets.broadcastTXT(JSON_Data);
-//       digitalWrite(relay, HIGH);
-//       Serial.println("motor start");
-//       delay(1000);
-//     }
-
-//     if (a == 1) ////////////////////1 level
-//     {
-//       Percentage = 20;
-//       String JSON_Data = "{\"level\":";
-//       JSON_Data += Percentage;
-//       JSON_Data += "}";
-//       Serial.println(JSON_Data);
-//       websockets.broadcastTXT(JSON_Data);
-//       delay(1000);
-//     }
-
-//     if (a == 2) /////////////////////////2 level
-//     {
-//       Percentage = 30;
-//       String JSON_Data = "{\"level\":";
-//       JSON_Data += Percentage;
-//       JSON_Data += "}";
-//       Serial.println(JSON_Data);
-//       websockets.broadcastTXT(JSON_Data);
-//       delay(1000);
-//     }
-
-//     if (a == 3) ////////////////////////////3 level
-//     {
-//       Percentage = 40;
-//       String JSON_Data = "{\"level\":";
-//       JSON_Data += Percentage;
-//       JSON_Data += "}";
-//       Serial.println(JSON_Data);
-//       websockets.broadcastTXT(JSON_Data);
-//       digitalWrite(relay, LOW);
-//       Serial.println("motor stop");
-//       delay(1000);
-//     }
-
-//     if (a == 4) //////////////////////////////4 level
-//     {
-//       Percentage = 10;
-//       String JSON_Data = "{\"level\":";
-//       JSON_Data += Percentage;
-//       JSON_Data += "}";
-//       Serial.println(JSON_Data);
-//       websockets.broadcastTXT(JSON_Data);
-//       delay(1000);
-//     }
-
-//     if (a == 5) ////////////////////////////////5 level
-//     {
-//       Percentage = 10;
-//       String JSON_Data = "{\"level\":";
-//       JSON_Data += Percentage;
-//       JSON_Data += "}";
-//       Serial.println(JSON_Data);
-//       websockets.broadcastTXT(JSON_Data);
-//       delay(1000);
-//     }
-
-//     if (a == 6) /////////////////////////////6 level
-//     {
-//       Percentage = 10;
-//       String JSON_Data = "{\"level\":";
-//       JSON_Data += Percentage;
-//       JSON_Data += "}";
-//       Serial.println(JSON_Data);
-//       websockets.broadcastTXT(JSON_Data);
-//       delay(1000);
-//     }
-
-//     if (a == 7) ///////////////////////////7 level
-//     {
-//       Percentage = 10;
-//       String JSON_Data = "{\"level\":";
-//       JSON_Data += Percentage;
-//       JSON_Data += "}";
-//       Serial.println(JSON_Data);
-//       websockets.broadcastTXT(JSON_Data);
-//       delay(1000);
-//     }
-
-//     if (a == 8) //////////////////////////8 level
-//     {
-//       Percentage = 10;
-//       String JSON_Data = "{\"level\":";
-//       JSON_Data += Percentage;
-//       JSON_Data += "}";
-//       Serial.println(JSON_Data);
-//       websockets.broadcastTXT(JSON_Data);
-//       delay(1000);
-//     }
-
-//     if (a == 9) // 9
-//     {
-//       Percentage = 10;
-//       String JSON_Data = "{\"level\":";
-//       JSON_Data += Percentage;
-//       JSON_Data += "}";
-//       Serial.println(JSON_Data);
-//       websockets.broadcastTXT(JSON_Data);
-//       delay(1000);
-//     }
-//   }
-
-//   websockets.loop();
-// }
-
 void loop()
 {
   delay(50);
@@ -651,8 +256,8 @@ void loop()
   EEPROM.read(5);
   // int b = analogRead(A1);
   int a = analogRead(sensor1);
-  // Serial.println(a);
-  // delay(500);
+  Serial.println(a);
+  delay(500);
 
   if (a <= 50)
   {
@@ -714,6 +319,7 @@ void loop()
         Percentage = 10;
         String JSON_Data = "{\"level\":";
         JSON_Data += Percentage;
+
         JSON_Data += "}";
         Serial.println(JSON_Data);
         websockets.broadcastTXT(JSON_Data);
@@ -1007,204 +613,5 @@ void loop()
       digitalWrite(pumponled, LOW);
     }
   }
-
-  // if (EEPROM.read(4) == 2) // automode
-  // {
-  //   digitalWrite(manled, LOW);
-  //   digitalWrite(autoled, HIGH);
-  //   // int a = analogRead(sensor1);
-
-  //   if (digitalRead(pumpstop) != HIGH)
-  //   {
-
-  //     // if (a <= 1) //////////////////////////
-  //     // {
-  //     //   EEPROM.write(0, 1);
-  //     //   EEPROM.write(1, 2);
-  //     // }
-
-  //     // if (a != 9 && EEPROM.read(0) == 1 && EEPROM.read(1) == 2)
-  //     // {
-  //     //   digitalWrite(relay, HIGH);
-  //     //   digitalWrite(pumponled, HIGH);
-  //     // }
-  //     Serial.println("auto mode start");
-  //     if (a == 0) //////////////////////////// 0 level
-  //     {
-  //       Percentage = 10;
-  //       String JSON_Data = "{\"level\":";
-  //       JSON_Data += Percentage;
-  //       JSON_Data += "}";
-  //       Serial.println(JSON_Data);
-  //       websockets.broadcastTXT(JSON_Data);
-  //       digitalWrite(relay, HIGH);
-  //       Serial.println("motor start");
-  //       delay(1000);
-  //     }
-
-  //     if (a == 1) ////////////////////1 level
-  //     {
-  //       Percentage = 20;
-  //       String JSON_Data = "{\"level\":";
-  //       JSON_Data += Percentage;
-  //       JSON_Data += "}";
-  //       Serial.println(JSON_Data);
-  //       websockets.broadcastTXT(JSON_Data);
-  //       delay(1000);
-  //     }
-
-  //     if (a == 2) /////////////////////////2 level
-  //     {
-  //       Percentage = 30;
-  //       String JSON_Data = "{\"level\":";
-  //       JSON_Data += Percentage;
-  //       JSON_Data += "}";
-  //       Serial.println(JSON_Data);
-  //       websockets.broadcastTXT(JSON_Data);
-  //       delay(1000);
-  //     }
-
-  //     if (a == 3) ////////////////////////////3 level
-  //     {
-  //       Percentage = 40;
-  //       String JSON_Data = "{\"level\":";
-  //       JSON_Data += Percentage;
-  //       JSON_Data += "}";
-  //       Serial.println(JSON_Data);
-  //       websockets.broadcastTXT(JSON_Data);
-  //       digitalWrite(relay, LOW);
-  //       Serial.println("motor stop");
-  //       delay(1000);
-  //     }
-
-  //     if (a == 4) //////////////////////////////4 level
-  //     {
-  //       Percentage = 10;
-  //       String JSON_Data = "{\"level\":";
-  //       JSON_Data += Percentage;
-  //       JSON_Data += "}";
-  //       Serial.println(JSON_Data);
-  //       websockets.broadcastTXT(JSON_Data);
-  //       delay(1000);
-  //     }
-
-  //     if (a == 5) ////////////////////////////////5 level
-  //     {
-  //       Percentage = 10;
-  //       String JSON_Data = "{\"level\":";
-  //       JSON_Data += Percentage;
-  //       JSON_Data += "}";
-  //       Serial.println(JSON_Data);
-  //       websockets.broadcastTXT(JSON_Data);
-  //       delay(1000);
-  //     }
-
-  //     if (a == 6) /////////////////////////////6 level
-  //     {
-  //       Percentage = 10;
-  //       String JSON_Data = "{\"level\":";
-  //       JSON_Data += Percentage;
-  //       JSON_Data += "}";
-  //       Serial.println(JSON_Data);
-  //       websockets.broadcastTXT(JSON_Data);
-  //       delay(1000);
-  //     }
-
-  //     if (a == 7) ///////////////////////////7 level
-  //     {
-  //       Percentage = 10;
-  //       String JSON_Data = "{\"level\":";
-  //       JSON_Data += Percentage;
-  //       JSON_Data += "}";
-  //       Serial.println(JSON_Data);
-  //       websockets.broadcastTXT(JSON_Data);
-  //       delay(1000);
-  //     }
-
-  //     if (a == 8) //////////////////////////8 level
-  //     {
-  //       Percentage = 10;
-  //       String JSON_Data = "{\"level\":";
-  //       JSON_Data += Percentage;
-  //       JSON_Data += "}";
-  //       Serial.println(JSON_Data);
-  //       websockets.broadcastTXT(JSON_Data);
-  //       delay(1000);
-  //     }
-
-  //     if (a == 9) // 9
-  //     {
-  //       Percentage = 10;
-  //       String JSON_Data = "{\"level\":";
-  //       JSON_Data += Percentage;
-  //       JSON_Data += "}";
-  //       Serial.println(JSON_Data);
-  //       websockets.broadcastTXT(JSON_Data);
-  //       delay(1000);
-  //     }
-
-  //     else
-  //     {
-
-  //       // tone(buzzer,900,500);
-  //       digitalWrite(relay, LOW);
-  //       digitalWrite(pumponled, LOW);
-  //     }
-
-  //     // if (a == 9)
-  //     // {
-  //     //   EEPROM.write(0, 2);
-  //     // }
-  //   }
-  //   else
-  //   {
-  //     digitalWrite(buzzer, HIGH);
-  //     delay(500);
-  //     digitalWrite(buzzer, LOW);
-  //     digitalWrite(relay, LOW);
-  //     digitalWrite(pumponled, LOW);
-  //     EEPROM.write(0, 2);
-  //   }
-
-  /*if(EEPROM.read(5)==2)
- {
-  int b = analogRead(sensor2);
-  if (digitalRead(pumpstop)!=HIGH)
-  {
-
-  if(b>=853)/////////////////////////
-  {
-  EEPROM.write(0,1);
-  EEPROM.write(1,2);
-  }
-
-  if (b>166&&EEPROM.read(0)==1&&EEPROM.read(1)==2)
-  {
-  digitalWrite(relay,HIGH);
-  digitalWrite(pumponled,HIGH);
- // Serial.println(b);
-// delay(100);
-  }
-
-  else
-  {
-  //tone(buzzer,900,500);
-  digitalWrite(relay,LOW);
-  digitalWrite(pumponled,LOW);
-  }
-
-  if (b<=166)
-  {
-  EEPROM.write(0,2);
-  }
-  }
-  else
-  {
-  digitalWrite(relay,LOW);
-  digitalWrite(pumponled,LOW);
-  EEPROM.write(0,2);
-  } }
- */
-  // }
   websockets.loop();
 }
