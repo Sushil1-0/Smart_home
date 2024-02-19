@@ -222,7 +222,7 @@ void setup()
   char deviceId[13];
   sprintf(deviceId, "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
   String chipID = String(ESP.getEfuseMac(), HEX);
-  extern String extendedDeviceID = chipID + deviceId;
+  String extendedDeviceID = chipID + deviceId;
 
   Serial.print("Extended Device ID: ");
   Serial.println(extendedDeviceID);
@@ -264,25 +264,25 @@ void loop()
     a = 11;
   }
   if (a > 4000)
-    a = 9;
-  if (a < 1000 && a > 800)
-    a = 0;
-  if (a < 1750 && a > 1550)
-    a = 1;
-  if (a < 2400 && a > 2100)
-    a = 2;
-  if (a < 3000 && a > 2500)
-    a = 3;
-  if (a < 3300 && a > 3100)
-    a = 4;
-  if (a < 3700 && a > 3600)
-    a = 5;
-  if (a < 4000 && a > 3800)
-    a = 6;
-  if (a < 290 && a > 150)
-    a = 7;
-  if (a < 150 && a > 50)
-    a = 8;
+    a = 10;
+  if (a < 3900 && a > 3800)
+    a = 1; //330ohm
+  if (a < 3400 && a > 3300)
+    a = 2;//270ohm
+  if (a < 3100 && a > 3000)
+    a = 3;//220ohm
+  if (a < 2950 && a > 2800)
+    a = 4;//200ohm
+  if (a < 2550 && a > 2400)
+    a = 5;//150ohm
+  if (a < 2000 && a > 1900)
+    a = 6;//100ohm
+  if (a < 1200 && a > 1100)
+    a = 7;//47ohm
+  if (a < 700 && a > 600)
+    a = 8;//22ohm
+  if (a < 450 && a > 350)
+    a = 9;//10ohm
 
   int buttonState1 = digitalRead(AMselector);
   // int buttonState2 = digitalRead(OUselector);
@@ -314,7 +314,7 @@ void loop()
     if (digitalRead(pumpstop) != HIGH)
     {
 
-      if (a == 0) //////////////////////////// 0 level
+      if (a == 1) //////////////////////////// 0 level
       {
         Percentage = 10;
         String JSON_Data = "{\"level\":";
@@ -328,7 +328,7 @@ void loop()
         delay(1000);
       }
 
-      if (a == 1) ////////////////////1 level
+      if (a == 2) ////////////////////1 level
       {
         Percentage = 20;
         String JSON_Data = "{\"level\":";
@@ -339,7 +339,7 @@ void loop()
         delay(1000);
       }
 
-      if (a == 2) /////////////////////////2 level
+      if (a == 3) /////////////////////////2 level
       {
         Percentage = 30;
         String JSON_Data = "{\"level\":";
@@ -350,7 +350,7 @@ void loop()
         delay(1000);
       }
 
-      if (a == 3) ////////////////////////////3 level
+      if (a == 4) ////////////////////////////3 level
       {
         Percentage = 40;
         String JSON_Data = "{\"level\":";
@@ -363,9 +363,9 @@ void loop()
         delay(1000);
       }
 
-      if (a == 4) //////////////////////////////4 level
+      if (a == 5) //////////////////////////////4 level
       {
-        Percentage = 10;
+        Percentage = 50;
         String JSON_Data = "{\"level\":";
         JSON_Data += Percentage;
         JSON_Data += "}";
@@ -374,9 +374,9 @@ void loop()
         delay(1000);
       }
 
-      if (a == 5) ////////////////////////////////5 level
+      if (a == 6) ////////////////////////////////5 level
       {
-        Percentage = 10;
+        Percentage = 60;
         String JSON_Data = "{\"level\":";
         JSON_Data += Percentage;
         JSON_Data += "}";
@@ -385,9 +385,9 @@ void loop()
         delay(1000);
       }
 
-      if (a == 6) /////////////////////////////6 level
+      if (a == 7) /////////////////////////////6 level
       {
-        Percentage = 10;
+        Percentage = 70;
         String JSON_Data = "{\"level\":";
         JSON_Data += Percentage;
         JSON_Data += "}";
@@ -396,9 +396,9 @@ void loop()
         delay(1000);
       }
 
-      if (a == 7) ///////////////////////////7 level
+      if (a == 8) ///////////////////////////7 level
       {
-        Percentage = 10;
+        Percentage = 80;
         String JSON_Data = "{\"level\":";
         JSON_Data += Percentage;
         JSON_Data += "}";
@@ -407,9 +407,9 @@ void loop()
         delay(1000);
       }
 
-      if (a == 8) //////////////////////////8 level
+      if (a == 9) //////////////////////////8 level
       {
-        Percentage = 10;
+        Percentage = 90;
         String JSON_Data = "{\"level\":";
         JSON_Data += Percentage;
         JSON_Data += "}";
@@ -417,7 +417,7 @@ void loop()
         websockets.broadcastTXT(JSON_Data);
         delay(1000);
       }
-      if (digitalRead(start) == HIGH && a != 3)
+      if (digitalRead(start) == HIGH && a != 9)
       {
         digitalWrite(buzzer, HIGH);
         delay(500);
@@ -426,18 +426,18 @@ void loop()
         digitalWrite(pumponled, HIGH);
       }
 
-      if (a == 3)
-      {
-        Percentage = 100;
-        String JSON_Data = "{\"level\":";
-        JSON_Data += Percentage;
-        JSON_Data += "}";
-        Serial.println(JSON_Data);
-        websockets.broadcastTXT(JSON_Data);
-        delay(1000);
-        digitalWrite(relay, LOW);
-        digitalWrite(pumponled, LOW);
-      }
+      // if (a == 9)
+      // {
+      //   Percentage = 100;
+      //   String JSON_Data = "{\"level\":";
+      //   JSON_Data += Percentage;
+      //   JSON_Data += "}";
+      //   Serial.println(JSON_Data);
+      //   websockets.broadcastTXT(JSON_Data);
+      //   delay(1000);
+      //   digitalWrite(relay, LOW);
+      //   digitalWrite(pumponled, LOW);
+      // }
     }
     else
     {
@@ -490,7 +490,7 @@ void loop()
     digitalWrite(autoled, HIGH);
     if (digitalRead(pumpstop) != HIGH)
     {
-      if (a == 0) //////////////////////////// 0 level
+      if (a == 1) //////////////////////////// 0 level
       {
         Percentage = 10;
         String JSON_Data = "{\"level\":";
@@ -503,7 +503,7 @@ void loop()
         delay(1000);
       }
 
-      if (a == 1) ////////////////////1 level
+      if (a == 2) ////////////////////1 level
       {
         Percentage = 20;
         String JSON_Data = "{\"level\":";
@@ -514,7 +514,7 @@ void loop()
         delay(1000);
       }
 
-      if (a == 2) /////////////////////////2 level
+      if (a == 3) /////////////////////////2 level
       {
         Percentage = 30;
         String JSON_Data = "{\"level\":";
@@ -525,7 +525,7 @@ void loop()
         delay(1000);
       }
 
-      if (a == 3) ////////////////////////////3 level
+      if (a == 4) ////////////////////////////3 level
       {
         Percentage = 40;
         String JSON_Data = "{\"level\":";
@@ -533,74 +533,63 @@ void loop()
         JSON_Data += "}";
         Serial.println(JSON_Data);
         websockets.broadcastTXT(JSON_Data);
+        delay(1000);
+      }
+
+      if (a == 5) //////////////////////////////4 level
+      {
+        Percentage = 50;
+        String JSON_Data = "{\"level\":";
+        JSON_Data += Percentage;
+        JSON_Data += "}";
+        Serial.println(JSON_Data);
+        websockets.broadcastTXT(JSON_Data);
+        delay(1000);
+      }
+
+      if (a == 6) ////////////////////////////////5 level
+      {
+        Percentage = 60;
+        String JSON_Data = "{\"level\":";
+        JSON_Data += Percentage;
+        JSON_Data += "}";
+        Serial.println(JSON_Data);
+        websockets.broadcastTXT(JSON_Data);
+        delay(1000);
+      }
+
+      if (a == 7) /////////////////////////////6 level
+      {
+        Percentage = 70;
+        String JSON_Data = "{\"level\":";
+        JSON_Data += Percentage;
+        JSON_Data += "}";
+        Serial.println(JSON_Data);
+        websockets.broadcastTXT(JSON_Data);
+        delay(1000);
+      }
+
+      if (a == 8) ///////////////////////////7 level
+      {
+        Percentage = 80;
+        String JSON_Data = "{\"level\":";
+        JSON_Data += Percentage;
+        JSON_Data += "}";
+        Serial.println(JSON_Data);
+        websockets.broadcastTXT(JSON_Data);
+        delay(1000);
+      }
+
+      if (a == 9) //////////////////////////8 level
+      {
+        Percentage = 90;
+        String JSON_Data = "{\"level\":";
+        JSON_Data += Percentage;
+        JSON_Data += "}";
+        Serial.println(JSON_Data);
+        websockets.broadcastTXT(JSON_Data);
         digitalWrite(relay, LOW);
         Serial.println("motor stop");
-        delay(1000);
-      }
-
-      if (a == 4) //////////////////////////////4 level
-      {
-        Percentage = 10;
-        String JSON_Data = "{\"level\":";
-        JSON_Data += Percentage;
-        JSON_Data += "}";
-        Serial.println(JSON_Data);
-        websockets.broadcastTXT(JSON_Data);
-        delay(1000);
-      }
-
-      if (a == 5) ////////////////////////////////5 level
-      {
-        Percentage = 10;
-        String JSON_Data = "{\"level\":";
-        JSON_Data += Percentage;
-        JSON_Data += "}";
-        Serial.println(JSON_Data);
-        websockets.broadcastTXT(JSON_Data);
-        delay(1000);
-      }
-
-      if (a == 6) /////////////////////////////6 level
-      {
-        Percentage = 10;
-        String JSON_Data = "{\"level\":";
-        JSON_Data += Percentage;
-        JSON_Data += "}";
-        Serial.println(JSON_Data);
-        websockets.broadcastTXT(JSON_Data);
-        delay(1000);
-      }
-
-      if (a == 7) ///////////////////////////7 level
-      {
-        Percentage = 10;
-        String JSON_Data = "{\"level\":";
-        JSON_Data += Percentage;
-        JSON_Data += "}";
-        Serial.println(JSON_Data);
-        websockets.broadcastTXT(JSON_Data);
-        delay(1000);
-      }
-
-      if (a == 8) //////////////////////////8 level
-      {
-        Percentage = 10;
-        String JSON_Data = "{\"level\":";
-        JSON_Data += Percentage;
-        JSON_Data += "}";
-        Serial.println(JSON_Data);
-        websockets.broadcastTXT(JSON_Data);
-        delay(1000);
-      }
-
-      if (a == 9) // 9
-      {
-        Percentage = 10;
-        String JSON_Data = "{\"level\":";
-        JSON_Data += Percentage;
-        JSON_Data += "}";
-        Serial.println(JSON_Data);
-        websockets.broadcastTXT(JSON_Data);
         delay(1000);
       }
     }
